@@ -15,6 +15,20 @@ def crear_carpeta(ruta_base, nombre_carpeta):
         print(f"Error al crear el directorio {nueva_ruta}: {error}")
               
 
+#Funcion para listar 
+def listar_archivos(ruta):
+    archivos = os.listdir(ruta)
+    return archivos
+
+#Funcion para borrar carpetas/archivos
+def borrar_archivos(ruta, nombre_archivo):
+    ruta_archivo = os.path.join(ruta, nombre_archivo)
+    try:
+        os.remove(ruta_archivo)
+        print(f"Archivo {ruta_archivo} eliminado correctamente")
+    except OSError as error:
+        print(f"Error al eliminar el archivo {ruta_archivo}: {error}")
+
 
 
 
