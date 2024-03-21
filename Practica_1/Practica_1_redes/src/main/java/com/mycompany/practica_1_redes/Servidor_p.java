@@ -124,24 +124,51 @@ public class Servidor_p {
                             dos.close();
 
                         } else if (numero == 4) {
-                            // Crear un flujo de entrada para recibir los datos del archivo
-                            InputStream entrada = cl.getInputStream();
+                           JFileChooser jf = new JFileChooser();
+            jf.setMultiSelectionEnabled(true);
+            int r = jf.showOpenDialog(null);
+            if(r==JFileChooser.APPROVE_OPTION){
+                File f = jf.getSelectedFile();
+                //File[] f = jf.getSelectedFiles();
+                 File ff= new File("");
+                 String z = ff.getAbsolutePath()+"\\";
+                 System.out.println("Ruta:"+z);
+                 File ff2 = new File(z);
+                File[] archivos = ff2.listFiles();
+                System.out.println("Hay "+archivos.length+"archivos");
+            for(int i=0;i<archivos.length;i++){
+                String xx = archivos[i].getAbsolutePath();
+                xx = (archivos[i].isDirectory())? xx+ "/":xx;
+                System.out.println(xx); 
+            }//
+                String nom = f.getName();
+                String path = f.getAbsolutePath();
+                long tama = f.length();
+                System.out.println("Preparandose pare enviar archivo "+path+" de "+tama+" bytes\n\n");
+                DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
+                DataInputStream dise = new DataInputStream(new FileInputStream(path));
+                dos.writeUTF(nom);
+                dos.flush();
+                dos.writeLong(tama);
+                dos.flush();
+                long enviados = 0;
+                int l=0,porcentaje=0;
+                while(enviados<tama){
+                    byte[] b = new byte[1500];
+                    l=dise.read(b);
+                    System.out.println("enviados: "+l);
+                    dos.write(b,0,l);// dos.write(b);
+                    dos.flush();
+                    enviados = enviados + l;
+                    porcentaje = (int)((enviados*100)/tama);
+                    System.out.print("\rEnviado el "+porcentaje+" % del archivo");
+                }//while
+                System.out.println("\nArchivo enviado..");
+                dise.close();
+                dos.close();
+                cl.close();
+            }//if
 
-                            // Leer los datos del archivo
-                            BufferedInputStream bis = new BufferedInputStream(entrada);
-                            byte[] buffer = new byte[8192]; // Tamaño del buffer
-                            int bytesRead;
-                            String nombreArchivo = "archivo"; // Nombre predeterminado del archivo
-                            File archivoSalida = new File(ruta_archivos_FR + File.separator + nombreArchivo);
-                            OutputStream sal = new FileOutputStream(archivoSalida);
-                            while ((bytesRead = bis.read(buffer)) != -1) {
-                                sal.write(buffer, 0, bytesRead);
-                            }
-                            sal.close();
-
-                            // Responder al cliente con la ruta donde se guardó el archivo
-                            String respuesta = "Archivo recibido y guardado en: " + ruta_archivos_FR;
-                            cl.getOutputStream().write(respuesta.getBytes());
 
                         } else if (numero == 5) {
                             String nueva_ruta = cadena;
