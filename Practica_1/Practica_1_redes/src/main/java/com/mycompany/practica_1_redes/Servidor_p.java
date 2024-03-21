@@ -86,7 +86,7 @@ public class Servidor_p {
                               System.out.println("La carpeta principal no existe.");
                           }
                         } else if (numero == 2) {
-                            String lugar = "Estimacion_y_costes.pdf\\";
+                            String lugar = cadena;
                             File elim_AoD = new File(ruta_archivos_FR +"\\"+lugar);
                             //eliminacion de un directorio
                             if (elim_AoD.exists() && elim_AoD.isDirectory()) {
@@ -144,7 +144,7 @@ public class Servidor_p {
                             cl.getOutputStream().write(respuesta.getBytes());
 
                         } else if (numero == 5) {
-                            String nueva_ruta = "subcarpeta_1";
+                            String nueva_ruta = cadena;
                             File NDirect = new File (ruta_archivos_FR +"\\"+nueva_ruta+"\\");
 
                             // Verificar si el directorio existe y es un directorio válido
@@ -159,7 +159,7 @@ public class Servidor_p {
                             String directorioActual = System.getProperty("user.dir");
 
                             // Nombre de la nueva carpeta
-                            String nombreNuevaCarpeta = "nuevaCarpeta";
+                            String nombreNuevaCarpeta = cadena;
 
                             // Crear un objeto File para representar la nueva carpeta
                             File nuevaCarpeta = new File(directorioActual, nombreNuevaCarpeta);
@@ -186,9 +186,6 @@ public class Servidor_p {
                         }
                     
                     }
-                    // Imprimir los datos recibidos
-                    System.out.println("Número: " + numero);
-                    System.out.println("Cadena: " + cadena);
                     
               
                     dis.close();
