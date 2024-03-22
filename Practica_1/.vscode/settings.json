@@ -3,5 +3,6 @@
         "activityBar.background": "#332A37",
         "titleBar.activeBackground": "#473B4D",
         "titleBar.activeForeground": "#FBFAFB"
-    }
+    },
+    "java.debug.settings.onBuildFailureProceed": true
 }

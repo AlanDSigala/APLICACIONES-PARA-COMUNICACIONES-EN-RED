@@ -69,7 +69,7 @@ def cambiar_carpeta(ruta_base):
     root = Tk.Tk()
     root.withdraw()  # Ocultar la ventana principal
 
-    nueva_ruta = filedialog.askdirectory(title="Selecciona la carpeta a moverse", initialdir=ruta_base)
+    nueva_ruta = filedialog.askdirectory(title="Selecciona la carpeta a moverse1", initialdir=ruta_base)
     try:
         os.chdir(nueva_ruta)
         print(f"Carpeta actual: {nueva_ruta}")
@@ -78,30 +78,60 @@ def cambiar_carpeta(ruta_base):
 
 
 
-#Enviar archivos como json
-def enviar_archivos(ruta, nombre_archivo):
-    ruta_archivo = os.path.join(ruta, nombre_archivo)
-    try:
-        with open(ruta_archivo, 'rb') as archivo:
-            datos = archivo.read(1024)
-            while datos:
-                # Serializar los datos a JSON
-                datos_json = json.dumps(datos.decode())
-                # Enviar los datos como JSON
-                client.send(datos_json.encode())
+def enviar_archivo():
+    root = Tk.Tk()
+    root.withdraw()  # Ocultar la ventana principal
+
+    ruta_archivo = filedialog.askopenfilename(title="Selecciona el archivo para enviar")
+    if ruta_archivo:
+        try:
+            with open(ruta_archivo, 'rb') as archivo:
                 datos = archivo.read(1024)
-            print(f"Archivo {ruta_archivo} enviado correctamente")
-    except OSError as error:
-        print(f"Error al enviar el archivo {ruta_archivo}: {error}")
+                while datos:
+                    # Serializar los datos a JSON
+                    datos_json = json.dumps(datos.decode())
+                    # Enviar los datos como JSON
+                    client.send(datos_json.encode())
+                    datos = archivo.read(1024)
+                print(f"Archivo {ruta_archivo} enviado correctamente")
+        except OSError as error:
+            print(f"Error al enviar el archivo {ruta_archivo}: {error}")
 
 #Funcion para enviar carpetas
-def enviar_carpeta(ruta):
-    try:
-        for raiz, dirs, archivos in os.walk(ruta):
-            for nombre_archivo in archivos:
-                enviar_archivos(raiz, nombre_archivo)
-    except OSError as error:
-        print(f"Error al enviar la carpeta {ruta}: {error}")
+def enviar_carpeta():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as datos_socket:
+        # Conectarse al servidor
+        datos_socket.connect(('localhost', 1234))
+        
+        root = Tk.Tk()
+        root.withdraw()  # Ocultar la ventana principal
+
+        ruta_carpeta = filedialog.askdirectory(title="Selecciona la carpeta para enviar")
+        if ruta_carpeta:
+            try:
+               
+                # Enviar la ruta de la carpeta al servidor
+                datos_socket.sendall(ruta_carpeta.encode())
+
+                # Recorrer recursivamente la estructura de directorios
+                estructura_directorios = {}
+                for root, dirs, files in os.walk(ruta_carpeta):
+                    archivos = {}
+                    for nombre_archivo in files:
+                        ruta_archivo = os.path.join(root, nombre_archivo)
+                        with open(ruta_archivo, 'rb') as archivo:
+                            contenido_archivo = archivo.read()
+                        archivos[nombre_archivo] = contenido_archivo
+                    estructura_directorios[root] = archivos
+            
+                # Serializar la estructura de directorios a JSON
+                estructura_directorios_json = json.dumps(estructura_directorios)
+                # Enviar la estructura de directorios como JSON
+                datos_socket.sendall(estructura_directorios_json.encode())
+            
+                print(f"Carpeta {ruta_carpeta} enviada correctamente")
+            except OSError as error:
+                print(f"Error al enviar la carpeta {ruta_carpeta}: {error}")
 
 
 
@@ -118,7 +148,7 @@ if __name__ == "__main__":
 
 while True:
     opc=input("Elige tu opcion: \n 1.Para ver tu carpeta local \n 2.Para ver tu carpeta remota \n 3. Para salir \n")
-    client.send(opc.encode(FORMAT))
+    
     
     if opc=="1":
         for root,dirs,files in os.walk(ruta_raiz,topdown=False):
@@ -141,7 +171,7 @@ while True:
 
     while True:
         opc2=input("Elige tu opcion: \n 1. Para ver tu carpeta local \n 2. Para crear carpeta \n 3. Para borrar carpeta \n 4. Para cambiar de carpeta \n 5. Para enviar archivos \n 6. Para enviar carpetas \n 7. Para salir \n")
-    #client.send(opc2.encode(FORMAT))
+        
 
         if opc=="1" and opc2=="1":
             mostrar_archivos_en_carpeta_actual()
@@ -151,6 +181,12 @@ while True:
             borrar_archivo_o_carpeta()
         elif opc=="1" and opc2=="4":
             cambiar_carpeta(ruta_raiz)
+        elif opc=="1" and opc2=="5":
+            enviar_archivo()
+        elif opc=="1" and opc2=="6":
+            # Enviamos la opción "carpeta" al servidor
+            client.sendall("carpeta".encode())
+            enviar_carpeta()
         elif opc=="1" and opc2=="7":
             break
         elif opc2=="7":
