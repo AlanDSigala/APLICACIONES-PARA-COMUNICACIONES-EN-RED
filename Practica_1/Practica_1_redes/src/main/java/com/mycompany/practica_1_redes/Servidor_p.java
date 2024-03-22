@@ -19,7 +19,7 @@ public class Servidor_p {
     public static void main(String[] args){
         try{
         
-            int pto = 9999;
+            int pto = 12345;
               ServerSocket s = new ServerSocket(pto);
               ServerSocket s2 = new ServerSocket(pto+1);
               s.setReuseAddress(true);
@@ -35,29 +35,18 @@ public class Servidor_p {
               
               for(;;){
                   Socket cl = s.accept();
-                  System.out.println("Cliente conectado desde "+cl.getInetAddress()+":"+cl.getPort());
+                  System.out.println("Cliente conectado desde "+cl.getInetAddress()+" : "+cl.getPort());
                   DataInputStream dis = new DataInputStream(cl.getInputStream());
-                  PrintWriter salida = new PrintWriter(cl.getOutputStream(), true);
-                  InputStream is = cl.getInputStream();
-                  String nombre = dis.readUTF();
-                  long tam = dis.readLong();
-                  // Crear un lector de entrada para recibir los datos del cliente en formato UTF-8
-                   BufferedReader lector = new BufferedReader(new InputStreamReader(cl.getInputStream(), "UTF-8"));
-                   String cadenaJSON = lector.readLine();
+                  DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
+                  System.out.println("Enviando mensaje");
                   
-                  // Convertir JSON a objeto
-                    JSONParser parser = new JSONParser();
-                    JSONObject jsonObject = (JSONObject) parser.parse(cadenaJSON);
-
-                    // Extraer datos del objeto JSON
-                    int numero = Integer.parseInt(jsonObject.get("numero").toString());
-                    String cadena = (String) jsonObject.get("cadena");
-                    //String nom = (String) jsonObject.get("nombre");
-                    System.out.println("numero"+numero);
-                    System.out.println("cadena"+cadena);
-                    //System.out.println("nom"+nom);
-                    //while(numero != 7){
-                        if(numero == 1){
+                  //contestando al cliente
+                  String mensaje = "Conexión establecida con el servidor.";
+                  dos.writeUTF(mensaje);
+                   
+                    //while(true){
+                    String opc = dis.readUTF();
+                        if(opc.equals("1")){
                             System.out.println("Opcion 1");
                             //1.- Listado de directorios 
                             File LFR = new File (ruta_archivos_FR);
@@ -93,9 +82,9 @@ public class Servidor_p {
                           } else {
                               System.out.println("La carpeta principal no existe.");
                           }
-                        } else if (numero == 2) {
+                        } else if (opc.equals("2")) {
                             System.out.println("Opcion 2");
-                            String lugar = cadena;
+                            String lugar = "";
                             File elim_AoD = new File(ruta_archivos_FR +"\\"+lugar);
                             //eliminacion de un directorio
                             if (elim_AoD.exists() && elim_AoD.isDirectory()) {
@@ -115,84 +104,17 @@ public class Servidor_p {
                             } else {
                                 System.out.println("La direccion del archivo/carpeta no es valida.");
                             }
-                        } else if (numero == 3) {
-                            // Obtener el nombre del archivo del JSON
-                            String nombreArchivo = (String) jsonObject.get(nombre);
-
-                            // Crear el archivo en el servidor
-                            File archivo = new File(nombreArchivo);
-                            FileOutputStream fos = new FileOutputStream(archivo);
-
-                            // Leer los datos del archivo del InputStream del socket y escribirlos en el archivo
+                        } else if (opc.equals("3")) {
                             
-                            byte[] buffer = new byte[4096];
-                            int bytesRead;
-                            while ((bytesRead = is.read(buffer)) != -1) {
-                                fos.write(buffer, 0, bytesRead);
-                            }
 
-                            // Cerrar flujos
-                            fos.close();
-                            is.close();
 
-                            System.out.println("Archivo recibido y guardado como: " + nombreArchivo);
-
-                        } else if (numero == 4) {
+                        } else if (opc.equals("4")) {
                             System.out.println("Opcion 4");
-                           JFileChooser jfc = new JFileChooser();
-                            jfc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-                            int resultado = jfc.showOpenDialog(null);
+                           
 
-                            if (resultado == JFileChooser.APPROVE_OPTION) {
-                                // Obtener el archivo o carpeta seleccionado por el cliente
-                                File archivoOCarpeta = jfc.getSelectedFile();
-
-                                // Obtener el flujo de salida para enviar los datos al servidor
-                                DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
-
-                                // Enviar el nombre del archivo o carpeta al servidor
-                                dos.writeUTF(archivoOCarpeta.getName());
-
-                                // Si es un archivo, enviar los datos del archivo al servidor
-                                if (archivoOCarpeta.isFile()) {
-                                    // Enviar la bandera indicando que es un archivo
-                                    dos.writeBoolean(true);
-
-                                    // Enviar el tamaño del archivo al servidor
-                                    dos.writeLong(archivoOCarpeta.length());
-
-                                    // Enviar los datos del archivo al servidor
-                                    FileInputStream fis = new FileInputStream(archivoOCarpeta);
-                                    byte[] buffer = new byte[4096];
-                                    int bytesRead;
-                                    while ((bytesRead = fis.read(buffer)) != -1) {
-                                        dos.write(buffer, 0, bytesRead);
-                                    }
-                                    fis.close();
-                                } else { // Si es una carpeta, enviar los nombres de los archivos en la carpeta al servidor
-                                    // Enviar la bandera indicando que es una carpeta
-                                    dos.writeBoolean(false);
-
-                                    // Enviar los nombres de los archivos en la carpeta al servidor
-                                    File[] archivosEnCarpeta = archivoOCarpeta.listFiles();
-                                    dos.writeInt(archivosEnCarpeta.length);
-                                    for (File archivo : archivosEnCarpeta) {
-                                        dos.writeUTF(archivo.getName());
-                                    }
-                                }
-
-                                // Cerrar flujos y conexiones
-                                dos.close();
-                                cl.close();
-                                System.out.println("Archivo o carpeta enviado.");
-                            } else {
-                                System.out.println("Operación cancelada por el usuario.");
-                            }
-
-
-                        } else if (numero == 5) {
+                        } else if (opc.equals("5")) {
                             System.out.println("Opcion 5");
-                            String nueva_ruta = cadena;
+                            String nueva_ruta = "";
                             File NDirect = new File (ruta_archivos_FR +"\\"+nueva_ruta+"\\");
 
                             // Verificar si el directorio existe y es un directorio válido
@@ -203,12 +125,12 @@ public class Servidor_p {
                             } else {
                                 System.out.println("El directorio especificado no existe o no es válido.");
                             }
-                        } else if (numero == 6) {
+                        } else if (opc.equals("6")) {
                             System.out.println("Opcion 6");
                             String directorioActual = System.getProperty("user.dir");
 
                             // Nombre de la nueva carpeta
-                            String nombreNuevaCarpeta = cadena;
+                            String nombreNuevaCarpeta = "";
 
                             // Crear un objeto File para representar la nueva carpeta
                             File nuevaCarpeta = new File(directorioActual, nombreNuevaCarpeta);
@@ -224,20 +146,20 @@ public class Servidor_p {
                             } else {
                                 System.out.println("La carpeta '" + nombreNuevaCarpeta + "' ya existe en el directorio actual.");
                             }
-                        } else if (numero == 7) {
+                        } else if (opc.equals("7")) {
                             // Desconectar al cliente
-                            salida.println("Desconectándote del servidor. Adiós!");
+                            dos.writeUTF("Desconectándote del servidor. Adiós!");
                             cl.close(); // Cerrar el socket del cliente
                             s.close(); // Cerrar el socket del servidor
                             System.exit(0); // Terminar el programa del servidor
                         } else {
-                            salida.println("Opción no válida.");
+                            dos.writeUTF("Opción no válida.");
                         }
                     
                     //}
                     
-              
-                    dis.close();
+                  dos.close();
+                  dis.close();
                   cl.close();
               }//for 
         
