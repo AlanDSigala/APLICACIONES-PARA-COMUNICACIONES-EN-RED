@@ -38,19 +38,27 @@ public class Servidor_p {
                   System.out.println("Cliente conectado desde "+cl.getInetAddress()+":"+cl.getPort());
                   DataInputStream dis = new DataInputStream(cl.getInputStream());
                   PrintWriter salida = new PrintWriter(cl.getOutputStream(), true);
+                  InputStream is = cl.getInputStream();
                   String nombre = dis.readUTF();
                   long tam = dis.readLong();
-                  
+                  // Crear un lector de entrada para recibir los datos del cliente en formato UTF-8
+                   BufferedReader lector = new BufferedReader(new InputStreamReader(cl.getInputStream(), "UTF-8"));
+                   String cadenaJSON = lector.readLine();
                   
                   // Convertir JSON a objeto
                     JSONParser parser = new JSONParser();
-                    JSONObject jsonObject = (JSONObject) parser.parse(nombre);
+                    JSONObject jsonObject = (JSONObject) parser.parse(cadenaJSON);
 
                     // Extraer datos del objeto JSON
                     int numero = Integer.parseInt(jsonObject.get("numero").toString());
                     String cadena = (String) jsonObject.get("cadena");
-                    while(numero != 7){
+                    //String nom = (String) jsonObject.get("nombre");
+                    System.out.println("numero"+numero);
+                    System.out.println("cadena"+cadena);
+                    //System.out.println("nom"+nom);
+                    //while(numero != 7){
                         if(numero == 1){
+                            System.out.println("Opcion 1");
                             //1.- Listado de directorios 
                             File LFR = new File (ruta_archivos_FR);
 
@@ -86,6 +94,7 @@ public class Servidor_p {
                               System.out.println("La carpeta principal no existe.");
                           }
                         } else if (numero == 2) {
+                            System.out.println("Opcion 2");
                             String lugar = cadena;
                             File elim_AoD = new File(ruta_archivos_FR +"\\"+lugar);
                             //eliminacion de un directorio
@@ -107,70 +116,82 @@ public class Servidor_p {
                                 System.out.println("La direccion del archivo/carpeta no es valida.");
                             }
                         } else if (numero == 3) {
-                            DataOutputStream dos = new DataOutputStream(new FileOutputStream(ruta_archivos_FR+nombre));
-                            long recibidos=0;
-                            int l=0, porcentaje=0;
-                            while(recibidos<tam){
-                                byte[] b = new byte[1500];
-                                l = dis.read(b);
-                                System.out.println("leidos: "+l);
-                                dos.write(b,0,l);
-                                dos.flush();
-                                recibidos = recibidos + l;
-                                porcentaje = (int)((recibidos*100)/tam);
-                                System.out.print("\rRecibido el "+ porcentaje +" % del archivo");
-                            }//while
-                            System.out.println("Archivo recibido..");
-                            dos.close();
+                            // Obtener el nombre del archivo del JSON
+                            String nombreArchivo = (String) jsonObject.get(nombre);
+
+                            // Crear el archivo en el servidor
+                            File archivo = new File(nombreArchivo);
+                            FileOutputStream fos = new FileOutputStream(archivo);
+
+                            // Leer los datos del archivo del InputStream del socket y escribirlos en el archivo
+                            
+                            byte[] buffer = new byte[4096];
+                            int bytesRead;
+                            while ((bytesRead = is.read(buffer)) != -1) {
+                                fos.write(buffer, 0, bytesRead);
+                            }
+
+                            // Cerrar flujos
+                            fos.close();
+                            is.close();
+
+                            System.out.println("Archivo recibido y guardado como: " + nombreArchivo);
 
                         } else if (numero == 4) {
-                           JFileChooser jf = new JFileChooser();
-            jf.setMultiSelectionEnabled(true);
-            int r = jf.showOpenDialog(null);
-            if(r==JFileChooser.APPROVE_OPTION){
-                File f = jf.getSelectedFile();
-                //File[] f = jf.getSelectedFiles();
-                 File ff= new File("");
-                 String z = ff.getAbsolutePath()+"\\";
-                 System.out.println("Ruta:"+z);
-                 File ff2 = new File(z);
-                File[] archivos = ff2.listFiles();
-                System.out.println("Hay "+archivos.length+"archivos");
-            for(int i=0;i<archivos.length;i++){
-                String xx = archivos[i].getAbsolutePath();
-                xx = (archivos[i].isDirectory())? xx+ "/":xx;
-                System.out.println(xx); 
-            }//
-                String nom = f.getName();
-                String path = f.getAbsolutePath();
-                long tama = f.length();
-                System.out.println("Preparandose pare enviar archivo "+path+" de "+tama+" bytes\n\n");
-                DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
-                DataInputStream dise = new DataInputStream(new FileInputStream(path));
-                dos.writeUTF(nom);
-                dos.flush();
-                dos.writeLong(tama);
-                dos.flush();
-                long enviados = 0;
-                int l=0,porcentaje=0;
-                while(enviados<tama){
-                    byte[] b = new byte[1500];
-                    l=dise.read(b);
-                    System.out.println("enviados: "+l);
-                    dos.write(b,0,l);// dos.write(b);
-                    dos.flush();
-                    enviados = enviados + l;
-                    porcentaje = (int)((enviados*100)/tama);
-                    System.out.print("\rEnviado el "+porcentaje+" % del archivo");
-                }//while
-                System.out.println("\nArchivo enviado..");
-                dise.close();
-                dos.close();
-                cl.close();
-            }//if
+                            System.out.println("Opcion 4");
+                           JFileChooser jfc = new JFileChooser();
+                            jfc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+                            int resultado = jfc.showOpenDialog(null);
+
+                            if (resultado == JFileChooser.APPROVE_OPTION) {
+                                // Obtener el archivo o carpeta seleccionado por el cliente
+                                File archivoOCarpeta = jfc.getSelectedFile();
+
+                                // Obtener el flujo de salida para enviar los datos al servidor
+                                DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
+
+                                // Enviar el nombre del archivo o carpeta al servidor
+                                dos.writeUTF(archivoOCarpeta.getName());
+
+                                // Si es un archivo, enviar los datos del archivo al servidor
+                                if (archivoOCarpeta.isFile()) {
+                                    // Enviar la bandera indicando que es un archivo
+                                    dos.writeBoolean(true);
+
+                                    // Enviar el tamaño del archivo al servidor
+                                    dos.writeLong(archivoOCarpeta.length());
+
+                                    // Enviar los datos del archivo al servidor
+                                    FileInputStream fis = new FileInputStream(archivoOCarpeta);
+                                    byte[] buffer = new byte[4096];
+                                    int bytesRead;
+                                    while ((bytesRead = fis.read(buffer)) != -1) {
+                                        dos.write(buffer, 0, bytesRead);
+                                    }
+                                    fis.close();
+                                } else { // Si es una carpeta, enviar los nombres de los archivos en la carpeta al servidor
+                                    // Enviar la bandera indicando que es una carpeta
+                                    dos.writeBoolean(false);
+
+                                    // Enviar los nombres de los archivos en la carpeta al servidor
+                                    File[] archivosEnCarpeta = archivoOCarpeta.listFiles();
+                                    dos.writeInt(archivosEnCarpeta.length);
+                                    for (File archivo : archivosEnCarpeta) {
+                                        dos.writeUTF(archivo.getName());
+                                    }
+                                }
+
+                                // Cerrar flujos y conexiones
+                                dos.close();
+                                cl.close();
+                                System.out.println("Archivo o carpeta enviado.");
+                            } else {
+                                System.out.println("Operación cancelada por el usuario.");
+                            }
 
 
                         } else if (numero == 5) {
+                            System.out.println("Opcion 5");
                             String nueva_ruta = cadena;
                             File NDirect = new File (ruta_archivos_FR +"\\"+nueva_ruta+"\\");
 
@@ -183,6 +204,7 @@ public class Servidor_p {
                                 System.out.println("El directorio especificado no existe o no es válido.");
                             }
                         } else if (numero == 6) {
+                            System.out.println("Opcion 6");
                             String directorioActual = System.getProperty("user.dir");
 
                             // Nombre de la nueva carpeta
@@ -212,7 +234,7 @@ public class Servidor_p {
                             salida.println("Opción no válida.");
                         }
                     
-                    }
+                    //}
                     
               
                     dis.close();
