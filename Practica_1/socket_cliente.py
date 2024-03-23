@@ -78,60 +78,63 @@ def cambiar_carpeta(ruta_base):
 
 
 
-def enviar_archivo():
-    root = Tk.Tk()
-    root.withdraw()  # Ocultar la ventana principal
+def enviar_archivo(host, puerto):
+    """Envía un archivo como JSON a través de un socket."""
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    ruta_archivo = filedialog.askopenfilename(title="Selecciona el archivo para enviar")
-    if ruta_archivo:
-        try:
-            with open(ruta_archivo, 'rb') as archivo:
-                datos = archivo.read(1024)
-                while datos:
-                    # Serializar los datos a JSON
-                    datos_json = json.dumps(datos.decode())
-                    # Enviar los datos como JSON
-                    client.send(datos_json.encode())
-                    datos = archivo.read(1024)
-                print(f"Archivo {ruta_archivo} enviado correctamente")
-        except OSError as error:
-            print(f"Error al enviar el archivo {ruta_archivo}: {error}")
+    try:
+        # Conecta el socket al servidor
+        server_address = (host, puerto)
+        sock.connect(server_address)
 
-#Funcion para enviar carpetas
-def enviar_carpeta():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as datos_socket:
-        # Conectarse al servidor
-        datos_socket.connect(('localhost', 1234))
-        
+        # Abre una ventana de diálogo para seleccionar el archivo
         root = Tk.Tk()
         root.withdraw()  # Ocultar la ventana principal
+        ruta_archivo = filedialog.askopenfilename(title="Selecciona el archivo para enviar")
+        sock.sendall(ruta_archivo.encode())
+        if ruta_archivo:
+            # Abre el archivo y lee su contenido
+            with open(ruta_archivo, 'r') as file:
+                contenido = file.read()
 
+            # Convierte el contenido del archivo a JSON
+            contenido_json = json.dumps(contenido)
+
+            # Envía el contenido del archivo como JSON
+            sock.sendall(contenido_json.encode())
+    finally:
+        # Cierra el socket
+        sock.close()
+
+#Funcion para enviar carpetas
+def enviar_carpeta(host, puerto):
+    """Envía una carpeta como JSON a través de un socket."""
+    # Crea un socket TCP/IP
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    try:
+        # Conecta el socket al servidor
+        server_address = (host, puerto)
+        sock.connect(server_address)
+
+        # Abre una ventana de diálogo para seleccionar la carpeta
+        root = Tk.Tk()
+        root.withdraw()  # Ocultar la ventana principal
         ruta_carpeta = filedialog.askdirectory(title="Selecciona la carpeta para enviar")
-        if ruta_carpeta:
-            try:
-               
-                # Enviar la ruta de la carpeta al servidor
-                datos_socket.sendall(ruta_carpeta.encode())
 
-                # Recorrer recursivamente la estructura de directorios
-                estructura_directorios = {}
-                for root, dirs, files in os.walk(ruta_carpeta):
-                    archivos = {}
-                    for nombre_archivo in files:
-                        ruta_archivo = os.path.join(root, nombre_archivo)
-                        with open(ruta_archivo, 'rb') as archivo:
-                            contenido_archivo = archivo.read()
-                        archivos[nombre_archivo] = contenido_archivo
-                    estructura_directorios[root] = archivos
-            
-                # Serializar la estructura de directorios a JSON
-                estructura_directorios_json = json.dumps(estructura_directorios)
-                # Enviar la estructura de directorios como JSON
-                datos_socket.sendall(estructura_directorios_json.encode())
-            
-                print(f"Carpeta {ruta_carpeta} enviada correctamente")
-            except OSError as error:
-                print(f"Error al enviar la carpeta {ruta_carpeta}: {error}")
+        if ruta_carpeta:
+            # Lee el contenido de la carpeta
+            contenido = os.listdir(ruta_carpeta)
+
+            # Convierte el contenido de la carpeta a JSON
+            contenido_json = json.dumps(contenido)
+
+            # Envía el contenido de la carpeta como JSON
+            sock.sendall(contenido_json.encode())
+    finally:
+        # Cierra el socket
+        sock.close()
 
 
 
@@ -182,11 +185,12 @@ while True:
         elif opc=="1" and opc2=="4":
             cambiar_carpeta(ruta_raiz)
         elif opc=="1" and opc2=="5":
-            enviar_archivo()
+            client.sendall("archivo".encode())
+            enviar_archivo('localhost', 1234)
         elif opc=="1" and opc2=="6":
             # Enviamos la opción "carpeta" al servidor
             client.sendall("carpeta".encode())
-            enviar_carpeta()
+            enviar_carpeta('localhost', 1234)
         elif opc=="1" and opc2=="7":
             break
         elif opc2=="7":
