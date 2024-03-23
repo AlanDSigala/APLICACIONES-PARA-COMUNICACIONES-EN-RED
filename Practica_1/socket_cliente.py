@@ -1,3 +1,4 @@
+import base64
 import pickle
 import shutil
 import socket
@@ -92,14 +93,31 @@ def enviar_archivo(host, puerto):
         root = Tk.Tk()
         root.withdraw()  # Ocultar la ventana principal
         ruta_archivo = filedialog.askopenfilename(title="Selecciona el archivo para enviar")
-        sock.sendall(ruta_archivo.encode())
+        
+        #sock.sendall(ruta_archivo.encode())
         if ruta_archivo:
+            #Obtenemos el nombre del archivo
+            nombre_archivo = os.path.basename(ruta_archivo)
+
+            # Envía el nombre del archivo
+            sock.sendall(nombre_archivo.encode())
+
+            #Envia tamaño del archivo
+            sock.sendall(str(os.path.getsize(ruta_archivo)).encode())
+
             # Abre el archivo y lee su contenido
-            with open(ruta_archivo, 'r') as file:
+            with open(ruta_archivo, 'rb') as file:
                 contenido = file.read()
 
+            # Convierte el contenido del archivo a base64
+            contenido_base64 = base64.b64encode(contenido).decode('utf-8')
+
+            # Crear un diccionario con el contenido base64
+            datos = {"archivo": contenido_base64}
+
+            
             # Convierte el contenido del archivo a JSON
-            contenido_json = json.dumps(contenido)
+            contenido_json = json.dumps(datos)
 
             # Envía el contenido del archivo como JSON
             sock.sendall(contenido_json.encode())
@@ -139,10 +157,10 @@ def enviar_carpeta(host, puerto):
 
 
 if __name__ == "__main__":
-    """ Staring a TCP socket. """
+    """ Creando un socket para el cliente."""
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_address = ('localhost', 12345) #IP y puerto del servidor
-    """ Connecting to the server. """
+    """ Conectando al servidor."""
     client.connect(server_address) # Conectando al servidor
 
      
