@@ -60,7 +60,8 @@ def recibir_carpeta(socket_servidor):
             print("Tamaño del archivo:", tamaño_archivo)
 
             # Recibe y guarda el contenido del archivo
-            with open(ruta_carpeta, 'wb') as file:  #os.path.join(nombre_carpeta, nombre_archivo)
+            ruta_archivo = os.path.join(ruta_carpeta, nombre_archivo) # Establece la ruta donde guardar el archivo
+            with open(ruta_archivo, 'wb') as file:  #os.path.join(nombre_carpeta, nombre_archivo)
                 while tamaño_archivo > 0:
                     data = socket_servidor.recv(1024)
                     if not data:
