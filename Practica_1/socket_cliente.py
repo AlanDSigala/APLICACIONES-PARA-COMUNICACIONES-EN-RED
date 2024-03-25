@@ -12,8 +12,9 @@ FORMAT = "utf-8"
 SIZE = 1024
 
 # Definir la ruta de la carpeta "raiz" (raíz de la aplicación)
-#ruta_raiz = 'C:\\Users\\Alan Sigala\\Desktop\\CarpetaCliente'
-ruta_raiz = 'S:\CarpetaCliente'
+ruta_raiz = 'C:\\Users\\Alan Sigala\\Desktop\\CarpetaCliente'
+#ruta_raiz = 'S:\CarpetaCliente'
+
 
 def obtener_tamaño_carpeta(ruta_carpeta):
     total_tamaño = 0

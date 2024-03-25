@@ -3,7 +3,8 @@ import os
 import shutil
 import socket
 SIZE = 1024
-ruta_remota ='C:\\Users\\Alan\\Desktop\\CarpetaRemota'
+
+ruta_remota = 'C:\\Users\\Alan Sigala\\Desktop\\CarpetaServidor'
 
 def recibir_archivo(socket_cliente):
     try:
@@ -36,9 +37,13 @@ def recibir_carpeta(socket_servidor):
         print("Nombre de la carpeta recibido:", nombre_carpeta)
 
         ruta_carpeta = os.path.join(ruta_remota, nombre_carpeta)  # Establece la ruta donde guardar la carpeta
-        # Crea la carpeta si no existe
-        if not os.path.exists(ruta_carpeta):
-            os.makedirs(nombre_carpeta)
+        try:
+
+            # Crea la carpeta si no existe
+            if not os.path.exists(ruta_carpeta):
+                os.makedirs(ruta_carpeta)
+        except Exception as e:
+            print("Error al crear la carpeta:", e)
 
         # Recibe el tamaño de la carpeta
         tamaño_carpeta = int(socket_servidor.recv(1024).decode())
@@ -55,7 +60,7 @@ def recibir_carpeta(socket_servidor):
             print("Tamaño del archivo:", tamaño_archivo)
 
             # Recibe y guarda el contenido del archivo
-            with open(os.path.join(nombre_carpeta, nombre_archivo), 'wb') as file:
+            with open(ruta_carpeta, 'wb') as file:  #os.path.join(nombre_carpeta, nombre_archivo)
                 while tamaño_archivo > 0:
                     data = socket_servidor.recv(1024)
                     if not data:
