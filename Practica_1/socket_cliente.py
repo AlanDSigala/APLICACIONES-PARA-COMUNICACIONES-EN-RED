@@ -15,6 +15,16 @@ SIZE = 1024
 #ruta_raiz = 'C:\\Users\\Alan Sigala\\Desktop\\CarpetaCliente'
 ruta_raiz = 'S:\CarpetaCliente'
 
+def obtener_tamaño_carpeta(ruta_carpeta):
+    total_tamaño = 0
+    # Itera sobre los archivos en la carpeta y suma sus tamaños
+    for ruta_actual, carpetas, archivos in os.walk(ruta_carpeta):
+        for archivo in archivos:
+            ruta_archivo = os.path.join(ruta_actual, archivo)
+            total_tamaño += os.path.getsize(ruta_archivo)
+    return total_tamaño
+
+
 def obtener_estructura_carpeta(ruta_carpeta):
     estructura = {}
     for ruta_actual, carpetas, archivos in os.walk(ruta_carpeta):
@@ -117,35 +127,47 @@ def enviar_archivo(socket_cliente):
 
             print("Archivo enviado correctamente.")
 
-#Funcion para enviar carpetas
-def enviar_carpeta(host, puerto):
-    """Envía una carpeta como JSON a través de un socket."""
-    # Crea un socket TCP/IP
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+# Funcion para enviar carpetas
+def enviar_carpeta(socket_cliente):
     try:
-        # Conecta el socket al servidor
-        server_address = (host, puerto)
-        sock.connect(server_address)
-
         # Abre una ventana de diálogo para seleccionar la carpeta
         root = tk.Tk()
         root.withdraw()  # Ocultar la ventana principal
         ruta_carpeta = filedialog.askdirectory(title="Selecciona la carpeta para enviar")
 
         if ruta_carpeta:
-           
-            # Convierte el contenido de la carpeta a un diccionario
-            estructura_carpeta = obtener_estructura_carpeta(ruta_carpeta)
+            # Envía el nombre de la carpeta
+            nombre_carpeta = os.path.basename(ruta_carpeta)
+            socket_cliente.sendall(nombre_carpeta.encode())
+            print("Nombre de la carpeta enviado:", nombre_carpeta)
 
-            # Convierte el contenido de la carpeta a JSON
-            contenido_json = json.dumps(estructura_carpeta)
+            # Envía el tamaño de la carpeta
+            tamaño_carpeta = obtener_tamaño_carpeta(ruta_carpeta)
+            socket_cliente.sendall(str(tamaño_carpeta).encode())
+            print("Tamaño de la carpeta enviado:", tamaño_carpeta)
 
-            # Envía el contenido de la carpeta como JSON
-            sock.sendall(contenido_json.encode())
-    finally:
-        # Cierra el socket
-        sock.close()
+            # Itera sobre los archivos en la carpeta y envía cada archivo
+            for root, dirs, files in os.walk(ruta_carpeta):
+                for filename in files:
+                    filepath = os.path.join(root, filename)
+                    # Envía el nombre del archivo
+                    socket_cliente.sendall(filename.encode())
+                    # Envía el tamaño del archivo
+                    tamaño_archivo = os.path.getsize(filepath)
+                    socket_cliente.sendall(str(tamaño_archivo).encode())
+                    # Abre el archivo y envía su contenido
+                    with open(filepath, 'rb') as file:
+                        while True:
+                            contenido = file.read(1024)
+                            if not contenido:
+                                break
+                            socket_cliente.sendall(contenido)
+
+            print("Contenido de la carpeta enviado correctamente.")
+
+    except Exception as e:
+        print(f"Error al enviar la carpeta: {e}")
+
 
 
 
@@ -205,7 +227,7 @@ while True:
             enviar_archivo(client)
         elif opc=="1" and opc2=="6":
             client.sendall("carpeta".encode())
-            enviar_carpeta('localhost', 1234)
+            enviar_carpeta(client)
         elif opc=="1" and opc2=="7":
             break
         elif opc2=="7":
