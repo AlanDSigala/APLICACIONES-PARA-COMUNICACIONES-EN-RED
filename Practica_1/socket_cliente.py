@@ -4,7 +4,7 @@ import shutil
 import socket
 import os
 import json
-import tkinter as Tk
+import tkinter as tk
 from tkinter import filedialog
 
 
@@ -12,11 +12,21 @@ FORMAT = "utf-8"
 SIZE = 1024
 
 # Definir la ruta de la carpeta "raiz" (raíz de la aplicación)
-ruta_raiz = 'C:\\Users\\Alan Sigala\\Desktop\\CarpetaCliente'
+#ruta_raiz = 'C:\\Users\\Alan Sigala\\Desktop\\CarpetaCliente'
+ruta_raiz = 'S:\CarpetaCliente'
+
+def obtener_estructura_carpeta(ruta_carpeta):
+    estructura = {}
+    for ruta_actual, carpetas, archivos in os.walk(ruta_carpeta):
+        estructura[ruta_actual] = {
+            'carpetas': carpetas,
+            'archivos': archivos
+        }
+    return estructura
 
 #Función para crear carpeta
 def crear_carpeta():
-    root = Tk.Tk()
+    root = tk.Tk()
     root.withdraw()  # Ocultar la ventana principal
 
     ruta_base = filedialog.askdirectory(title="Selecciona la carpeta base", initialdir=ruta_raiz)
@@ -43,7 +53,7 @@ def mostrar_archivos_en_carpeta_actual():
 
 #Funcion para borrar carpetas/archivos
 def borrar_archivo_o_carpeta():
-    root = Tk.Tk()
+    root = tk.Tk()
     root.withdraw()  # Ocultar la ventana principal
 
     ruta = filedialog.askopenfilename(title="Selecciona el archivo", initialdir=ruta_raiz)
@@ -67,7 +77,7 @@ def borrar_archivo_o_carpeta():
 
 #Funcion para cambiar de carpeta
 def cambiar_carpeta(ruta_base):
-    root = Tk.Tk()
+    root = tk.Tk()
     root.withdraw()  # Ocultar la ventana principal
 
     nueva_ruta = filedialog.askdirectory(title="Selecciona la carpeta a moverse1", initialdir=ruta_base)
@@ -78,52 +88,34 @@ def cambiar_carpeta(ruta_base):
         print(f"Error al cambiar de carpeta: {error}")
 
 
-
-def enviar_archivo(host, puerto):
-    """Envía un archivo como JSON a través de un socket."""
-    
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    try:
-        # Conecta el socket al servidor
-        server_address = (host, puerto)
-        sock.connect(server_address)
-
+#Funcion para enviar archivos
+def enviar_archivo(socket_cliente):
+        
         # Abre una ventana de diálogo para seleccionar el archivo
-        root = Tk.Tk()
+        root = tk.Tk()
         root.withdraw()  # Ocultar la ventana principal
         ruta_archivo = filedialog.askopenfilename(title="Selecciona el archivo para enviar")
         
-        #sock.sendall(ruta_archivo.encode())
         if ruta_archivo:
             #Obtenemos el nombre del archivo
             nombre_archivo = os.path.basename(ruta_archivo)
 
             # Envía el nombre del archivo
-            sock.sendall(nombre_archivo.encode())
+            socket_cliente.sendall(nombre_archivo.encode())
 
             #Envia tamaño del archivo
-            sock.sendall(str(os.path.getsize(ruta_archivo)).encode())
+            tamaño_archivo = os.path.getsize(ruta_archivo)
+            socket_cliente.sendall(str(tamaño_archivo).encode())
 
-            # Abre el archivo y lee su contenido
+            # Abre el archivo y envía su contenido en bloques
             with open(ruta_archivo, 'rb') as file:
-                contenido = file.read()
+                while True:
+                    contenido = file.read(1024)
+                    if not contenido:
+                        break
+                    socket_cliente.sendall(contenido)
 
-            # Convierte el contenido del archivo a base64
-            contenido_base64 = base64.b64encode(contenido).decode('utf-8')
-
-            # Crear un diccionario con el contenido base64
-            datos = {"archivo": contenido_base64}
-
-            
-            # Convierte el contenido del archivo a JSON
-            contenido_json = json.dumps(datos)
-
-            # Envía el contenido del archivo como JSON
-            sock.sendall(contenido_json.encode())
-    finally:
-        # Cierra el socket
-        sock.close()
+            print("Archivo enviado correctamente.")
 
 #Funcion para enviar carpetas
 def enviar_carpeta(host, puerto):
@@ -137,16 +129,17 @@ def enviar_carpeta(host, puerto):
         sock.connect(server_address)
 
         # Abre una ventana de diálogo para seleccionar la carpeta
-        root = Tk.Tk()
+        root = tk.Tk()
         root.withdraw()  # Ocultar la ventana principal
         ruta_carpeta = filedialog.askdirectory(title="Selecciona la carpeta para enviar")
 
         if ruta_carpeta:
-            # Lee el contenido de la carpeta
-            contenido = os.listdir(ruta_carpeta)
+           
+            # Convierte el contenido de la carpeta a un diccionario
+            estructura_carpeta = obtener_estructura_carpeta(ruta_carpeta)
 
             # Convierte el contenido de la carpeta a JSON
-            contenido_json = json.dumps(contenido)
+            contenido_json = json.dumps(estructura_carpeta)
 
             # Envía el contenido de la carpeta como JSON
             sock.sendall(contenido_json.encode())
@@ -164,7 +157,7 @@ if __name__ == "__main__":
     client.connect(server_address) # Conectando al servidor
 
      
-    msg=client.recv(SIZE).decode(FORMAT)
+    msg=client.recv(SIZE).decode()
     print(f"[SERVER]: {msg}")
 
 while True:
@@ -179,11 +172,16 @@ while True:
                 print(os.path.join(root,name))
 
     elif opc=="2":
-        path=client.recv(SIZE)
-        print("Tu carpeta remota: \n")
-        d=pickle.loads(path[100:])
-        resultado='\n'.join(d)
-        print(resultado)
+        client.sendall(opc.encode()) # Enviar la opción al servidor
+        estructura_json = client.recv(SIZE).decode() # Recibir estructura de la carpeta
+        estructura_carpeta = json.loads(estructura_json) # Convertir JSON a diccionario
+        for ruta_actual, contenido in estructura_carpeta.items(): # Iterar sobre la estructura de la carpeta
+            print("Carpeta:", ruta_actual)
+            print("Contenido:")
+            for carpeta in contenido['carpetas']:
+                print(" - ", carpeta)
+            for archivo in contenido['archivos']:
+                print(" - ", archivo)
     
     elif opc=="3":
         break
@@ -204,9 +202,8 @@ while True:
             cambiar_carpeta(ruta_raiz)
         elif opc=="1" and opc2=="5":
             client.sendall("archivo".encode())
-            enviar_archivo('localhost', 1234)
+            enviar_archivo(client)
         elif opc=="1" and opc2=="6":
-            # Enviamos la opción "carpeta" al servidor
             client.sendall("carpeta".encode())
             enviar_carpeta('localhost', 1234)
         elif opc=="1" and opc2=="7":
