@@ -28,28 +28,47 @@ def recibir_archivo(socket_cliente):
         print(f"Error al recibir el archivo: {e}")
 
 
-def recibir_carpeta(socket_cliente, ruta_destino):
-    # Recibe la estructura de la carpeta como JSON
-    estructura_carpeta_json = socket_cliente.recv(4096).decode()
-    estructura_carpeta = json.loads(estructura_carpeta_json)
+# Función para recibir una carpeta
+def recibir_carpeta(socket_servidor):
+    try:
+        # Recibe el nombre de la carpeta
+        nombre_carpeta = socket_servidor.recv(1024).decode()
+        print("Nombre de la carpeta recibido:", nombre_carpeta)
 
-    # Recorre la estructura y crea las carpetas/archivos
-    for ruta_actual, contenido in estructura_carpeta.items():
+        ruta_carpeta = os.path.join(ruta_remota, nombre_carpeta)  # Establece la ruta donde guardar la carpeta
         # Crea la carpeta si no existe
-        ruta_completa = os.path.join(ruta_destino, ruta_actual)
-        if not os.path.exists(ruta_completa):
-            os.makedirs(ruta_completa)
+        if not os.path.exists(ruta_carpeta):
+            os.makedirs(nombre_carpeta)
 
-        # Guarda los archivos en la carpeta
-        for archivo in contenido['archivos']:
-            ruta_archivo = os.path.join(ruta_completa, archivo)
-            with open(ruta_archivo, 'wb') as f:
-                # Recibe los datos del archivo
-                while True:
-                    datos = socket_cliente.recv(4096)
-                    if not datos:
+        # Recibe el tamaño de la carpeta
+        tamaño_carpeta = int(socket_servidor.recv(1024).decode())
+        print("Tamaño de la carpeta:", tamaño_carpeta)
+
+        # Recibe los archivos y guárdalos en la carpeta
+        while tamaño_carpeta > 0:
+            # Recibe el nombre del archivo
+            nombre_archivo = socket_servidor.recv(1024).decode()
+            print("Nombre del archivo recibido:", nombre_archivo)
+
+            # Recibe el tamaño del archivo
+            tamaño_archivo = int(socket_servidor.recv(1024).decode())
+            print("Tamaño del archivo:", tamaño_archivo)
+
+            # Recibe y guarda el contenido del archivo
+            with open(os.path.join(nombre_carpeta, nombre_archivo), 'wb') as file:
+                while tamaño_archivo > 0:
+                    data = socket_servidor.recv(1024)
+                    if not data:
                         break
-                    f.write(datos)
+                    file.write(data)
+                    tamaño_archivo -= len(data)
+                    tamaño_carpeta -= len(data)
+
+        print("Carpeta recibida correctamente.")
+
+    except Exception as e:
+        print(f"Error al recibir la carpeta: {e}")
+
 
 def enviar_estructura_carpeta(socket_cliente, ruta_carpeta):
     estructura_carpeta = obtener_estructura_carpeta(ruta_carpeta)
@@ -87,7 +106,7 @@ def iniciar_servidor():
             recibir_archivo(client_socket)
         elif opcion == 'carpeta':
             #nombre_carpeta = client_socket.recv(1024).decode()
-            recibir_carpeta(client_socket, ruta_remota)
+            recibir_carpeta(client_socket)
 
         elif opcion == '2':
             enviar_estructura_carpeta(client_socket, ruta_remota)
